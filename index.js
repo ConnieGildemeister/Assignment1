@@ -43,6 +43,13 @@ app.get('/RE/:id', (req,res) => {
     }
 });
 
+app.use(express.static(__dirname + "/public"));
+
+app.get("*", (req,res) => {
+	res.status(404);
+	res.send("404 error - page not found");
+});
+
 app.listen(port, () => {
     console.log("Your Assignment 1 is listening on port "+port);
 })
