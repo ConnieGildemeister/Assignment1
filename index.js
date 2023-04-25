@@ -1,4 +1,6 @@
 const express = require('express');
+const bcrypt = require('bcrypt');
+const saltrounds = 12;
 
 const session = require('express-session');
 
@@ -44,7 +46,9 @@ app.post('/submitUser', (req,res) => {
     var username = req.body.username;
     var password = req.body.password;
 
-    users.push({ username: username, password: password });
+    var hashedPass = bcrypt.hashSync(password, saltrounds);
+
+    users.push({ username: username, password: hashedPass });
 
     console.log(users);
 
