@@ -27,6 +27,22 @@ app.get('/', (req,res) => {
     res.send('The page has ' + req.session.numViews + ' views');
 })
 
+
+app.get('/RE/:id', (req,res) => {
+
+    var RE = req.params.id;
+
+    if (RE == 1) {
+        res.send("RE1: <img src='/RE1.jpg' style='width:250px;'>");
+    }
+    else if (RE == 2) {
+        res.send("RE2: <img src='/RE2.png' style='width:250px;'>");
+    }
+    else {
+        res.send("Invalid Resident evil game id: "+RE);
+    }
+});
+
 app.listen(port, () => {
     console.log("Your Assignment 1 is listening on port "+port);
 })
