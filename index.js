@@ -16,7 +16,7 @@ app.use(session({
     resave: true 
 }))
 
-var numViews = 0;
+var users = [];
 
 app.use(express.urlencoded({extended: false}));
 
@@ -28,6 +28,34 @@ app.get('/', (req,res) => {
     }
     res.send('The page has ' + req.session.numViews + ' views');
 })
+
+app.get('/createUser', (req,res) => {
+    var html = `
+    <form action='/submitUser' method='post'>
+    <input name='username' type='text' placeholder='username'>
+    <input name='password' type='password' placeholder='password'>
+    <button>Submit</button>
+    </form>
+    `;
+    res.send(html);
+});
+
+app.post('/submitUser', (req,res) => {
+    var username = req.body.username;
+    var password = req.body.password;
+
+    users.push({ username: username, password: password });
+
+    console.log(users);
+
+    var usersPerson = "";
+    for (i = 0; i < users.length; i++) {
+        usersPerson += users[i].username + ": " + users[i].password + "</br>";
+    }
+
+    var html = usersPerson + "</br>";
+    res.send(html);
+});
 
 app.get('/contact', (req,res) => {
     var missingEmail = req.query.missing;
