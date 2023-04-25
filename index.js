@@ -18,6 +18,8 @@ app.use(session({
 
 var numViews = 0;
 
+app.use(express.urlencoded({extended: false}));
+
 app.get('/', (req,res) => {
     if (req.session.numViews == null) {
         req.session.numViews = 0;
@@ -27,6 +29,30 @@ app.get('/', (req,res) => {
     res.send('The page has ' + req.session.numViews + ' views');
 })
 
+app.get('/contact', (req,res) => {
+    var missingEmail = req.query.missing;
+    var html = `
+        email address:
+        <form action='/submitEmail' method='post'>
+            <input name='email' type='text' placeholder='email'>
+            <button>Submit</button>
+        </form>
+    `;
+    if (missingEmail) {
+        html += "<br> email is required";
+    }
+    res.send(html);
+});
+
+app.post('/email', (req,res) => {
+    var email = req.body.email;
+    if (!email) {
+        res.redirect('/contact?missing=1');
+    }
+    else {
+        res.send("The email you input is: "+email);
+    }
+});
 
 app.get('/RE/:id', (req,res) => {
 
