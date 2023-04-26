@@ -55,12 +55,13 @@ app.use(session({
 ));
 
 app.get('/', (req,res) => {
-    if (req.session.numViews == null) {
-        req.session.numViews = 0;
-    } else {
-        req.session.numViews++;
-    }
-    res.send('The page has ' + req.session.numViews + ' views');
+
+    var html = `
+    <h2><a href="/createUser">Sign Up</a></br>
+    <a href="/login">Log In</a><h2>
+    `
+
+    res.send(html);
 });
 
 app.get('/nosql-injection', async (req,res) => {
@@ -90,10 +91,10 @@ app.get('/nosql-injection', async (req,res) => {
 
 app.get('/createUser', (req,res) => {
     var html = `
-    create user
+    <h2>Create user</h2>
     <form action='/submitUser' method='post'>
-    <input name='username' type='text' placeholder='username'>
-    <input name='password' type='password' placeholder='password'>
+    <input name='username' type='text' placeholder='username'></br>
+    <input name='password' type='password' placeholder='password'></br>
     <button>Submit</button>
     </form>
     `;
@@ -102,10 +103,10 @@ app.get('/createUser', (req,res) => {
 
 app.get('/login', (req,res) => {
     var html = `
-    log in
+    <h2>Log in</h2>
     <form action='/loggingin' method='post'>
-    <input name='username' type='text' placeholder='username'>
-    <input name='password' type='password' placeholder='password'>
+    <input name='username' type='text' placeholder='username'></br>
+    <input name='password' type='password' placeholder='password'></br>
     <button>Submit</button>
     </form>
     `;
@@ -135,8 +136,23 @@ app.post('/submitUser', async (req,res) => {
 	await userCollection.insertOne({username: username, password: hashedPassword});
 	console.log("Inserted user");
 
-    var html = "successfully created";
-    res.send(html);
+    var html = "<h1>Hello " + username + "! Welcome to COMP2537!</h1></br>";
+
+    var RE = Math.floor(Math.random() * 3);
+
+    var html2 = `
+        <a href="/logout">Log Out</a><h2>    
+    `
+    
+    if (RE == 0) {
+        res.send(html + "<img src='/RE1.jpg' style='width:250px;'></br>" + html2);
+    }
+    else if (RE == 1) {
+        res.send(html + "<img src='/RE2.png' style='width:250px;'></br>" + html2);
+    } 
+    else if (RE == 2) {
+        res.send(html + "<img src='/RE3.jpg' style='width:250px;'></br>" + html2);
+    }
 });
 
 app.post('/loggingin', async (req,res) => {
@@ -176,13 +192,27 @@ app.post('/loggingin', async (req,res) => {
 });
 
 app.get('/loggedin', (req,res) => {
-    if (!req.session.authenticated) {
-        res.redirect('/login');
-    }
+    var username = req.session.username;
+
+    var RE = Math.floor(Math.random() * 3);
+
     var html = `
-    successfully logged in!
-    `;
-    res.send(html);
+    <h2>Successfully logged in
+    ` ;
+
+    var html2 = `
+    <h2><a href="/logout">Log Out</a></h2>    
+    `
+
+    if (RE == 0) {
+        res.send(html + username + "!</h2>" + "</br><img src='/RE1.jpg' style='width:250px;'></br>" + html2);
+    }
+    else if (RE == 1) {
+        res.send(html + username + "!</h2>" + "<img src='/RE2.png' style='width:250px;'></br>" + html2);
+    } 
+    else if (RE == 2) {
+        res.send(html + username + "!</h2>" + "<img src='/RE3.jpg' style='width:250px;'></br>" + html2);
+    }
 });
 
 app.get('/contact', (req,res) => {
@@ -212,10 +242,7 @@ app.post('/email', (req,res) => {
 
 app.get('/logout', (req,res) => {
 	req.session.destroy();
-    var html = `
-    You are logged out.
-    `;
-    res.send(html);
+    res.redirect('/');
 });
 
 app.get('/RE/:id', (req,res) => {
@@ -227,6 +254,9 @@ app.get('/RE/:id', (req,res) => {
     }
     else if (RE == 2) {
         res.send("RE2: <img src='/RE2.png' style='width:250px;'>");
+    } 
+    else if (RE == 3) {
+        res.send("RE3: <img src='/RE3.jpg' style='width:250px;'>");
     }
     else {
         res.send("Invalid Resident evil game id: "+RE);
