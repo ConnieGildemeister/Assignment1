@@ -74,7 +74,7 @@ app.get('/nosql-injection', async (req,res) => {
 
 	const schema = Joi.string().max(20).required();
 	const validationResult = schema.validate(username);
-    
+
 	if (validationResult.error != null) {  
 	   console.log(validationResult.error);
 	   res.send("<h1 style='color:darkred;'>A NoSQL injection attack was detected!!</h1>");
@@ -208,6 +208,14 @@ app.post('/email', (req,res) => {
     else {
         res.send("The email you input is: "+email);
     }
+});
+
+app.get('/logout', (req,res) => {
+	req.session.destroy();
+    var html = `
+    You are logged out.
+    `;
+    res.send(html);
 });
 
 app.get('/RE/:id', (req,res) => {
