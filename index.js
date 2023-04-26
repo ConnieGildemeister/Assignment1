@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const MongoStore = require('connect-mongo');
 const bcrypt = require('bcrypt');
@@ -12,19 +13,20 @@ const expireTime = 1 * 60 * 60 * 1000;
 
 const port = process.env.PORT || 4000;
 
-const mongodb_session_secret = '2db5ddae-906e-4903-85c5-d86dffce3a06';
+const mongodb_session_secret = process.env.MONGODB_SESSION_SECRET;
+const node_session_secret = process.env.NODE_SESSION_SECRET;
 
 app
 app.use(session({
-    secret: mongodb_session_secret,
+    secret: node_session_secret,
     saveUninitialized: false,
     resave: true 
 }))
 
 var users = [];
 
-const mongodb_user = "conniegildemeister";
-const mongodb_password = "0VwgTlshUNPf14Lq";
+const mongodb_user = process.env.MONGODB_USER;
+const mongodb_password = process.env.MONGODB_PASSWORD;
 
 app.use(express.urlencoded({extended: false}));
 
@@ -37,7 +39,7 @@ var mongoStore = MongoStore.create({
 })
 
 app.use(session({ 
-    secret: mongodb_session_secret,
+    secret: node_session_secret,
 	store: mongoStore, //default is memory store 
 	saveUninitialized: false, 
 	resave: true
