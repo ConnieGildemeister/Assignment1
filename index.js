@@ -12,11 +12,11 @@ const expireTime = 1 * 60 * 60 * 1000;
 
 const port = process.env.PORT || 4000;
 
-const node_session_secret = '2db5ddae-906e-4903-85c5-d86dffce3a06';
+const mongodb_session_secret = '2db5ddae-906e-4903-85c5-d86dffce3a06';
 
 app
 app.use(session({
-    secret: node_session_secret,
+    secret: mongodb_session_secret,
     saveUninitialized: false,
     resave: true 
 }))
@@ -29,11 +29,15 @@ const mongodb_password = "0VwgTlshUNPf14Lq";
 app.use(express.urlencoded({extended: false}));
 
 var mongoStore = MongoStore.create({
-	mongoUrl: `mongodb+srv://${mongodb_user}:${mongodb_password}@cluster0.3ccoipv.mongodb.net/test`
+	mongoUrl: `mongodb+srv://${mongodb_user}:${mongodb_password}@cluster0.3ccoipv.mongodb.net/test`,
+	crypto: {
+		secret: mongodb_session_secret
+	}
+
 })
 
 app.use(session({ 
-    secret: node_session_secret,
+    secret: mongodb_session_secret,
 	store: mongoStore, //default is memory store 
 	saveUninitialized: false, 
 	resave: true
