@@ -1,4 +1,5 @@
 const express = require('express');
+const MongoStore = require('connect-mongo');
 const bcrypt = require('bcrypt');
 const saltrounds = 12;
 
@@ -6,6 +7,8 @@ const session = require('express-session');
 
 
 const app = express();
+
+const expireTime = 1 * 60 * 60 * 1000;
 
 const port = process.env.PORT || 4000;
 
@@ -20,7 +23,22 @@ app.use(session({
 
 var users = [];
 
+const mongodb_user = "conniegildemeister";
+const mongodb_password = "0VwgTlshUNPf14Lq";
+
 app.use(express.urlencoded({extended: false}));
+
+var mongoStore = MongoStore.create({
+	mongoUrl: `mongodb+srv://${mongodb_user}:${mongodb_password}@cluster0.3ccoipv.mongodb.net/test`
+})
+
+app.use(session({ 
+    secret: node_session_secret,
+	store: mongoStore, //default is memory store 
+	saveUninitialized: false, 
+	resave: true
+}
+));
 
 app.get('/', (req,res) => {
     if (req.session.numViews == null) {
@@ -84,6 +102,9 @@ app.post('/loggingin', (req,res) => {
     for (i = 0; i < users.length; i++) {
         if (users[i].username == username) {
             if (bcrypt.compareSync(password, users[i].password)) {
+                req.session.authenticated = true;
+                req.session.username = username;
+                req.session.cookie.maxAge = expireTime;
                 res.redirect('/loggedIn');
                 return;
             }
@@ -95,8 +116,11 @@ app.post('/loggingin', (req,res) => {
 });
 
 app.get('/loggedin', (req,res) => {
+    if (!req.session.authenticated) {
+        res.redirect('/login');
+    }
     var html = `
-    You are logged in!
+    successfully logged in!
     `;
     res.send(html);
 });
