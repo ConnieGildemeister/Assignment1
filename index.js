@@ -13,7 +13,7 @@ const app = express();
 
 const Joi = require("joi");
 
-const port = process.env.PORT || 4000;
+const port = process.env.PORT || 3000;
 
 const mongodb_session_secret = process.env.MONGODB_SESSION_SECRET;
 const node_session_secret = process.env.NODE_SESSION_SECRET;
