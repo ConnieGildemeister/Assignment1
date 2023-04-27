@@ -113,6 +113,32 @@ app.get('/login', (req,res) => {
     res.send(html);
 });
 
+app.get('/loginErrorUser', (req,res) => {
+    var html = `
+    <h2>Log in</h2>
+    <form action='/loggingin' method='post'>
+    <input name='username' type='text' placeholder='username'></br>
+    <input name='password' type='password' placeholder='password'></br>
+    <button>Submit</button>
+    </form>
+    <h3 style='color:darkred;'>User not found</h3>
+    `;
+    res.send(html);
+});
+
+app.get('/loginErrorPassword', (req,res) => {
+    var html = `
+    <h2>Log in</h2>
+    <form action='/loggingin' method='post'>
+    <input name='username' type='text' placeholder='username'></br>
+    <input name='password' type='password' placeholder='password'></br>
+    <button>Submit</button>
+    </form>
+    <h3 style='color:darkred;'>Incorrect Password</h3>
+    `;
+    res.send(html);
+});
+
 
 app.post('/submitUser', async (req,res) => {
     var username = req.body.username;
@@ -172,7 +198,7 @@ app.post('/loggingin', async (req,res) => {
     console.log(result);
 	if (result.length != 1) {
 		console.log("user not found");
-		res.redirect("/login");
+		res.redirect("/loginErrorUser");
 		return;
 	}
 	if (await bcrypt.compare(password, result[0].password)) {
@@ -186,12 +212,15 @@ app.post('/loggingin', async (req,res) => {
 	}
 	else {
 		console.log("incorrect password");
-		res.redirect("/login");
+		res.redirect("/loginErrorPassword");
 		return;
 	}
 });
 
 app.get('/loggedin', (req,res) => {
+    if (!req.session.authenticated) {
+        res.redirect('/login');
+    }
     var username = req.session.username;
 
     var RE = Math.floor(Math.random() * 3);
