@@ -285,9 +285,16 @@ app.get('/RE/:id', (req,res) => {
 
 app.use(express.static(__dirname + "/public"));
 
-app.get("*", (req,res) => {
-	res.status(404);
-	res.send("404 error - page not found");
+app.use((req, res, next) => {
+    const err = new Error('Not Found');
+    err.status = 404;
+    next(err);
+});
+
+app.use((err, req, res, next) => {
+    const status = err.status || 500;
+
+    res.status(status).send(`Error ${status}: ${err.message}`);
 });
 
 app.listen(port, () => {
