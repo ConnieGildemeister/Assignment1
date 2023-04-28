@@ -18,13 +18,6 @@ const port = process.env.PORT || 3000;
 const mongodb_session_secret = process.env.MONGODB_SESSION_SECRET;
 const node_session_secret = process.env.NODE_SESSION_SECRET;
 
-app
-app.use(session({
-    secret: node_session_secret,
-    saveUninitialized: false,
-    resave: true 
-}))
-
 const expireTime = 1 * 60 * 60 * 1000;
 
 const mongodb_host = process.env.MONGODB_HOST;
@@ -48,13 +41,20 @@ var mongoStore = MongoStore.create({
 
 app.use(session({ 
     secret: node_session_secret,
-	store: mongoStore, //default is memory store 
+	store: mongoStore,
 	saveUninitialized: false, 
 	resave: true
 }
 ));
 
-app.get('/', (req,res) => {
+const isAuthenticated = (req, res, next) => {
+    if (req.session.authenticated) {
+        return res.redirect('/loggedin');
+    }
+    return next();
+};
+
+app.get('/', isAuthenticated, (req,res) => {
 
     var html = `
     <h2><a href="/createUser">Sign Up</a></br>
@@ -102,6 +102,7 @@ app.get('/createUser', (req,res) => {
 });
 
 app.get('/login', (req,res) => {
+
     var html = `
     <h2>Log in</h2>
     <form action='/loggingin' method='post'>
@@ -162,28 +163,18 @@ app.post('/submitUser', async (req,res) => {
 	await userCollection.insertOne({username: username, password: hashedPassword});
 	console.log("Inserted user");
 
-    var html = "<h1>Hello " + username + "! Welcome to COMP2537!</h1></br>";
+    req.session.authenticated = true;
+    req.session.username = username;
+    req.session.cookie.maxAge = expireTime;
 
-    var RE = Math.floor(Math.random() * 3);
-
-    var html2 = `
-        <a href="/logout">Log Out</a><h2>    
-    `
-    
-    if (RE == 0) {
-        res.send(html + "<img src='/RE1.jpg' style='width:250px;'></br>" + html2);
-    }
-    else if (RE == 1) {
-        res.send(html + "<img src='/RE2.png' style='width:250px;'></br>" + html2);
-    } 
-    else if (RE == 2) {
-        res.send(html + "<img src='/RE3.jpg' style='width:250px;'></br>" + html2);
-    }
+    res.redirect('/loggedin')
 });
 
 app.post('/loggingin', async (req,res) => {
     var username = req.body.username;
     var password = req.body.password;
+
+    
 
 
     const schema = Joi.string().max(20).required();
