@@ -1,10 +1,12 @@
 require("./utils.js");
+const mysql = require("mysql2/promise")
 
 require('dotenv').config();
 const express = require('express');
 const MongoStore = require('connect-mongo');
 const bcrypt = require('bcrypt');
 const saltRounds = 12;
+
 
 const session = require('express-session');
 
@@ -27,7 +29,6 @@ const mongodb_database = process.env.MONGODB_DATABASE;
 
 var {database} = include('databaseConnection');
 
-const userCollection = database.db(mongodb_database).collection('users');
 
 app.use(express.urlencoded({extended: false}));
 
@@ -54,6 +55,49 @@ const isAuthenticated = (req, res, next) => {
     return next();
 };
 
+const sqldb = process.env.SQL_DATABASE;
+const sqluser = process.env.SQL_USER;
+const sqlpassword = process.env.SQL_PASSWORD;
+const sqlhost = process.env.SQL_HOST;
+
+const sqlConfig = {
+    host: process.env.SQL_HOST,
+    user: process.env.SQL_USER,
+    password: process.env.SQL_PASSWORD,
+    database: process.env.SQL_DATABASE,
+    multipleStatements: true
+};
+
+async function connectAndQuery() {
+    try {
+        // Create a connection to the database
+        const connection = await mysql.createConnection({
+            host: sqlhost, // MySQL server host
+            user: sqluser, // MySQL username
+            password: sqlpassword, // MySQL password
+            database: sqldb, // MySQL database name
+            multipleStatements: true // Allow multiple SQL statements per query
+        });
+
+        // Perform a query
+        const [rows, fields] = await connection.execute('SELECT * FROM users');
+
+        // Log query results
+        console.log(rows);
+
+        // Close the connection
+        await connection.end();
+    } catch (error) {
+        console.error('Error connecting to the database:', error);
+    }
+}
+
+
+const userCollection = database.db(sqldb).collection('users');
+
+// Call the function
+connectAndQuery();
+
 app.get('/', isAuthenticated, (req,res) => {
 
     var html = `
@@ -73,7 +117,7 @@ app.get('/nosql-injection', async (req,res) => {
 	}
 	console.log("user: "+username);
 
-	const schema = Joi.string().max(20).required();
+	const schema = Joi.string().required();
 	const validationResult = schema.validate(username);
 
 	if (validationResult.error != null) {  
@@ -82,7 +126,7 @@ app.get('/nosql-injection', async (req,res) => {
 	   return;
 	}	
 
-	const result = await userCollection.find({username: username}).project({username: 1, password: 1, _id: 1}).toArray();
+	const result = await userCollection.find({username: username}).project({username: 1, password: 1, user_id: 1}).toArray();
 
 	console.log(result);
 
@@ -141,72 +185,94 @@ app.get('/loginErrorPassword', (req,res) => {
 });
 
 
-app.post('/submitUser', async (req,res) => {
-    var username = req.body.username;
-    var password = req.body.password;
+app.post('/submitUser', async (req, res) => {
+    const { username, password } = req.body;
 
-    const schema = Joi.object(
-		{
-			username: Joi.string().alphanum().max(20).required(),
-			password: Joi.string().max(20).required()
-		});
+    // Validation schema for user input
+    const schema = Joi.object({
+        username: Joi.string().alphanum().required(),
+        password: Joi.string().min(5).required() // Ensure strong password requirements
+    });
 
-	const validationResult = schema.validate({username, password});
-	if (validationResult.error != null) {
-	   console.log(validationResult.error);
-	   res.redirect("/createUser");
-	   return;
-   }
+    const validationResult = schema.validate({ username, password });
+    if (validationResult.error) {
+        console.log(validationResult.error);
+        return res.redirect("/createUser");
+    }
 
-    var hashedPassword = await bcrypt.hash(password, saltRounds);
+    try {
+        // Hash the user's password
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-	await userCollection.insertOne({username: username, password: hashedPassword});
-	console.log("Inserted user");
+        // Connect to the MySQL database
+        const connection = await mysql.createConnection(sqlConfig);
 
-    req.session.authenticated = true;
-    req.session.username = username;
-    req.session.cookie.maxAge = expireTime;
+        // Insert the new user into the database
+        const [rows] = await connection.execute(
+            "INSERT INTO users (username, password) VALUES ('" + username + "', '" + hashedPassword + "')",
+            [username, hashedPassword]
+        );
 
-    res.redirect('/loggedin')
+        console.log("Inserted user:", rows);
+        await connection.end();
+
+        // Set session variables and redirect the user
+        req.session.authenticated = true;
+        req.session.username = username;
+        req.session.cookie.maxAge = expireTime;
+        res.redirect('/loggedin');
+    } catch (error) {
+        console.error('Error inserting user into MySQL database:', error);
+        res.status(500).send('Internal Server Error');
+    }
 });
 
-app.post('/loggingin', async (req,res) => {
-    var username = req.body.username;
-    var password = req.body.password;
+app.post('/loggingin', async (req, res) => {
+    const username = req.body.username;
+    const password = req.body.password;
 
-    
+    const schema = Joi.string().required();
+    const validationResult = schema.validate(username);
+    if (validationResult.error != null) {
+        console.log(validationResult.error);
+        res.redirect("/login");
+        return;
+    }
 
+    try {
+        const connection = await mysql.createConnection(sqlConfig);
+        
+        const unsafeQuery = `SELECT * FROM users WHERE username = '${username}'`;
+        console.log("unsafeQuery: ", unsafeQuery);
+        const [users] = await connection.query(unsafeQuery);
 
-    const schema = Joi.string().max(20).required();
-	const validationResult = schema.validate(username);
-	if (validationResult.error != null) {
-	   console.log(validationResult.error);
-	   res.redirect("/login");
-	   return;
-	}
-    const result = await userCollection.find({username: username}).project({username: 1, password: 1, _id: 1}).toArray();
+        await connection.end();
 
-    console.log(result);
-	if (result.length != 1) {
-		console.log("user not found");
-		res.redirect("/loginErrorUser");
-		return;
-	}
-	if (await bcrypt.compare(password, result[0].password)) {
-		console.log("correct password");
-		req.session.authenticated = true;
-		req.session.username = username;
-		req.session.cookie.maxAge = expireTime;
+        if (users.length === 0) {
+            console.log("user not found");
+            res.redirect("/loginErrorUser");
+            return;
+        }
 
-		res.redirect('/loggedIn');
-		return;
-	}
-	else {
-		console.log("incorrect password");
-		res.redirect("/loginErrorPassword");
-		return;
-	}
+        const user = users[0];
+
+        const passwordMatch = await bcrypt.compare(password, user.password);
+        if (passwordMatch) {
+            console.log("correct password");
+            req.session.authenticated = true;
+            req.session.username = username;
+            req.session.cookie.maxAge = expireTime;
+            res.redirect('/loggedin');
+        } else {
+            console.log("incorrect password");
+            res.redirect("/loginErrorPassword");
+        }
+    } catch (error) {
+        console.error('Error checking user in MySQL database:', error);
+        res.status(500).send('Internal Server Error');
+    }
 });
+
 
 app.get('/loggedin', (req,res) => {
     if (!req.session.authenticated) {
