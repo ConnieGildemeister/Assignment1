@@ -457,7 +457,7 @@ app.get('/rooms/:roomId', async (req, res) => {
         console.log("readMessages: ", readMessages);
         console.log("unreadMessages: ", unreadMessages);
 
-        const emojis = ['❤️'];
+        const emojis = ['thumbs up', '100 percent', 'happy face', '❤️'];
 
         let messagesHtml1 = readMessages.map(message => {
             // Create a dropdown or buttons for emoji reactions
